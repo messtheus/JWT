@@ -15,11 +15,7 @@ const app = express();
 //Configuração JSON response
 app.use(express.json());
 
-//Rotas
-  //Rota inicial
-  app.get('/', (req, res) => {
-    res.status(200).json({ msg: 'Bem vindo a nossa API' })
-  })
+//Rotas Publicas
 
   //Rota de Registro
   app.post('/auth/registro', async (req, res) => {
@@ -103,8 +99,43 @@ app.use(express.json());
         }
       }
     }
+  })
+
+//Rotas Privadas
+//Rota Salvar Dados
+app.get('/user/dados', checkToken, async (req, res) => {
+  res.status(200).json({ msg: 'Dados salvos com sucesso!' })
+  /*
+  //Recebe os dados do corpo   
+  //const { userId, userDado} = req.body
+  //Verifica se todos os campos foram preenchidos
+  //if (!userId || !userDado) {
+    return res.status(422).json({ error: 'Não foi possivel salvar dados vasios' })
+  }
+  */
 })
 
+/**
+ * Middleware responsavel por verificar se o token
+ * passado na requisição esta valido e permitir o acesso
+ * a rotas privadas.
+ */
+function checkToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (token == null) {
+      return res.status(401).json({ msg: 'Acesso negado' });
+    }
+      try{
+        const secret = process.env.SECRET;
+        jwt.verify(token, secret);
+        next();
+
+        }catch(error){
+          return res.status(403).json({ msg: 'Token invalido' });
+
+        } 
+  }
 
 
 app.listen(3000)
