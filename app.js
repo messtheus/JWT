@@ -3,7 +3,7 @@ require('dotenv').config(0)
 const express = require('express')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
-const Longin = require('./src/crud/Login.js')
+const Longin = require('./src/crud/Login')
 const bd = require('./bd.js')
 
 //Conecta ao BD
@@ -29,8 +29,18 @@ app.use(express.json());
     //Verifica se todos os campos foram preenchidos
     if (!nome || !email || !senha || !confirmarSenha) {
       return res.status(422).json({ error: 'Todos os campos são obrigatórios' })
-    } else {
-      let cod = await Longin.CreateUsuario(req.body)
+    } else if (senha != confirmarSenha) {
+      return res.status(422).json({ error: 'As senhas devem ser iguais' })
+    }
+    //Cria o usuário no BD
+    else {
+
+      //Cria password
+      const salt = await bcrypt.genSalt(12);
+      const passwordHash = await bcrypt.hash(senha, salt);
+
+  
+      let cod = await Longin.CreateUsuario({nome, email, passwordHash});
       console.log(cod);
       //Usuario ja cadastrado
       if (cod == 1) {
@@ -49,6 +59,51 @@ app.use(express.json());
       }
     }
   })
+  //Rota de Login
+  app.post('/auth/login', async (req, res) => {
+
+    //Recebe os dados do corpo   
+    const { email, senha } = req.body
+    //Verifica se todos os campos foram preenchidos
+    if (!email || !senha) {
+      return res.status(422).json({ error: 'Todos os campos são obrigatórios' })
+    }
+    else {
+      //Checa se o usuário já é cadastrado
+      const {Resultado, userSenha, userId} = await Longin.ConsultarUsuarioExistente(email);
+      console.log(userSenha);
+      //Usuario nao cadastrado
+      if (!Resultado) {
+        console.log('Usuário ', email, ' não cadastrado!');
+        res.status(404).json({ msg: 'Usuário ' + email + ' nao cadastrado!' })
+      
+      }
+      //checa senha
+      else if (!await bcrypt.compare(senha, userSenha)) {
+        console.log('Senha incorreta!');
+        res.status(422).json({ msg: 'Senha incorreta!' })
+      }
+      //Sucesso
+      else {
+        try{
+          const secret = process.env.SECRET;
+          const token = jwt.sign(
+            {
+            id: userId
+            }, 
+            secret);
+
+            res.status(200).json({ msg: 'Usuário ' + email + ', logado com sucesso!', token })
+
+          console.log(token);
+
+        }catch(error){
+          console.log('Erro ao logar Usuário, verifique as informações ou contate o suporte!');
+          res.status(500).json({ msg: 'Erro ao logar Usuário, verifique as informações ou contate o suporte!' })
+        }
+      }
+    }
+})
 
 
 

@@ -9,7 +9,7 @@ async function CreateUsuario(dados) {
       console.log(dados);
       TabelaUsuarios.set("userName", dados.nome);
       TabelaUsuarios.set("userEmail", dados.email);
-      TabelaUsuarios.set("userPassword", dados.senha);
+      TabelaUsuarios.set("userPassword", dados.passwordHash);
 
       try {
             const result = await TabelaUsuarios.save();
@@ -26,15 +26,20 @@ async function CreateUsuario(dados) {
 
 async function ConsultarUsuarioExistente(dados) {
   
-  const Usuario = Parse.Object.extend("Usuario");
+  //const Usuario = Parse.Object.extend("Usuario");
   const query = new Parse.Query('Usuario');
-  query.equalTo("userEmail", dados.email);
-  const object = await query.first();
+  query.equalTo("userEmail", dados);
+  const result = await query.first();
+  const userSenha = result.get('userPassword');
+  const userId = result.id;
 
-  if (object) {
-    return true;
+  if (result) {
+    
+    const Resultado = true;
+    return {Resultado, userSenha, userId};
   } else {
-    return false
+    const Resultado = false
+    return {Resultado}
   }
 }
 
