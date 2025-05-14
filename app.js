@@ -17,7 +17,7 @@ app.use(express.json());
 
 //Rotas Publicas
 
-  //Rota de Registro
+  //Rota de Registro - Cria um novo usuário
   app.post('/auth/registro', async (req, res) => {
 
     //Recebe os dados do corpo   
@@ -26,11 +26,9 @@ app.use(express.json());
     if (!nome || !email || !senha || !confirmarSenha) {
       return res.status(422).json({ error: 'Todos os campos são obrigatórios' })
     } else if (senha != confirmarSenha) {
-      return res.status(422).json({ error: 'As senhas devem ser iguais' })
-    }
+      return res.status(422).json({ error: 'As senhas devem ser iguais' })}
     //Cria o usuário no BD
     else {
-
       //Cria password
       const salt = await bcrypt.genSalt(12);
       const passwordHash = await bcrypt.hash(senha, salt);
@@ -66,16 +64,16 @@ app.use(express.json());
     }
     else {
       //Checa se o usuário já é cadastrado
-      const {Resultado, userSenha, userId} = await Longin.ConsultarUsuarioExistente(email);
-      console.log(userSenha);
-      //Usuario nao cadastrado
-      if (!Resultado) {
+      const UsuarioExistente = (await Longin.ConsultarUsuarioExistente(email));
+
+      //Usuario não cadastrado
+      if (!UsuarioExistente.Resultado) {
         console.log('Usuário ', email, ' não cadastrado!');
         res.status(404).json({ msg: 'Usuário ' + email + ' nao cadastrado!' })
       
       }
       //checa senha
-      else if (!await bcrypt.compare(senha, userSenha)) {
+      else if (!await bcrypt.compare(senha, UsuarioExistente.userSenha)) {
         console.log('Senha incorreta!');
         res.status(422).json({ msg: 'Senha incorreta!' })
       }
@@ -83,13 +81,14 @@ app.use(express.json());
       else {
         try{
           const secret = process.env.SECRET;
+          const userId = UsuarioExistente.userId
           const token = jwt.sign(
             {
             id: userId
             }, 
             secret);
 
-            res.status(200).json({ msg: 'Usuário ' + email + ', logado com sucesso!', token })
+            res.status(200).json({ msg: 'Usuário ' + email + ', logado com sucesso!', token, user: userId });
 
           console.log(token);
 
@@ -101,19 +100,21 @@ app.use(express.json());
     }
   })
 
-//Rotas Privadas
-//Rota Salvar Dados
-app.get('/user/dados', checkToken, async (req, res) => {
-  res.status(200).json({ msg: 'Dados salvos com sucesso!' })
-  /*
-  //Recebe os dados do corpo   
-  //const { userId, userDado} = req.body
-  //Verifica se todos os campos foram preenchidos
-  //if (!userId || !userDado) {
-    return res.status(422).json({ error: 'Não foi possivel salvar dados vasios' })
-  }
-  */
-})
+  //Rotas Privadas
+
+    //Rota Salvar Dados
+    app.get('/user/dados', checkToken, async (req, res) => {
+      res.status(200).json({ msg: 'Dados salvos com sucesso!' })
+    })
+
+    //Rota deletar Usuário
+    app.delete('/user/deletaruser', checkToken, async (req, res) => {
+
+      const {userId} = req.body
+      const result = await Longin.DeletarUser(userId)
+      res.status(result.status).json({ msg: result.msg })
+      
+    })
 
 /**
  * Middleware responsavel por verificar se o token
