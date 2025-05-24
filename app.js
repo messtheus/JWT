@@ -91,7 +91,7 @@ app.use(express.json());
             res.status(200).json({ msg: 'Usuário ' + email + ', logado com sucesso!', token, user: userId });
 
           console.log(token);
-
+0
         }catch(error){
           console.log('Erro ao logar Usuário, verifique as informações ou contate o suporte!');
           res.status(500).json({ msg: 'Erro ao logar Usuário, verifique as informações ou contate o suporte!' })
